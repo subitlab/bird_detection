@@ -76,16 +76,102 @@ def create_final_image(image_np, mask, output_folder="uploads"):
     # 识别主体部分
     subject_mask = (mask > 0).astype(np.uint8)
     
+    # 形态学操作清理掩膜
+    # 1. 开运算：去除小噪声
+    kernel_small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    subject_mask = cv2.morphologyEx(subject_mask, cv2.MORPH_OPEN, kernel_small)
+    
+    # 2. 闭运算：连接断开的区域
+    kernel_large = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    subject_mask = cv2.morphologyEx(subject_mask, cv2.MORPH_CLOSE, kernel_large)
+    
     # 查找连接的组件（主体）
     num_labels, labels_im = cv2.connectedComponents(subject_mask)
     num_subjects = num_labels - 1  # 减去背景
     
-    if num_subjects != 1:
-        raise Exception(f"未检测到主体或检测到多个主体（{num_subjects} 个主体）")
+    if num_subjects == 0:
+        raise Exception(f"未检测到任何主体")
+    elif num_subjects == 1:
+        # 只有一个主体，使用原有逻辑
+        coords = cv2.findNonZero(subject_mask)
+        x, y, w, h = cv2.boundingRect(coords)
+    else:
+        # 多个主体时，选择最佳的主体
+        print(f"🔍 检测到 {num_subjects} 个主体，智能选择最佳主体")
+        
+        best_score = 0
+        best_component = 0
+        image_center_x, image_center_y = image_np.shape[1] // 2, image_np.shape[0] // 2
+        
+        # 遍历所有连通组件，计算综合评分
+        for label in range(1, num_labels):  # 跳过背景（label=0）
+            component_mask = (labels_im == label).astype(np.uint8)
+            area = cv2.countNonZero(component_mask)
+            
+            # 跳过过小的组件
+            if area < 100:  # 过滤掉噪声点
+                continue
+            
+            # 获取组件的边界框和中心点
+            coords = cv2.findNonZero(component_mask)
+            if coords is None:
+                continue
+                
+            x, y, w, h = cv2.boundingRect(coords)
+            component_center_x = x + w // 2
+            component_center_y = y + h // 2
+            
+            # 计算综合评分
+            # 1. 面积评分 (40%)
+            area_score = area / (image_np.shape[0] * image_np.shape[1])  # 归一化面积
+            
+            # 2. 位置评分 (30%) - 越靠近图像中心越好
+            distance_to_center = np.sqrt((component_center_x - image_center_x)**2 + 
+                                       (component_center_y - image_center_y)**2)
+            max_distance = np.sqrt(image_center_x**2 + image_center_y**2)
+            position_score = 1 - (distance_to_center / max_distance)
+            
+            # 3. 形状评分 (20%) - 长宽比接近1:1到2:1之间较好（鸟类特征）
+            aspect_ratio = max(w, h) / min(w, h)
+            if aspect_ratio <= 2.0:
+                shape_score = 1.0
+            elif aspect_ratio <= 3.0:
+                shape_score = 0.7
+            else:
+                shape_score = 0.3
+            
+            # 4. 尺寸评分 (10%) - 不能太小也不能太大
+            size_ratio = min(w, h) / max(image_np.shape[0], image_np.shape[1])
+            if 0.1 <= size_ratio <= 0.8:
+                size_score = 1.0
+            else:
+                size_score = 0.5
+            
+            # 综合评分
+            total_score = (area_score * 0.6 + position_score * 0.1 + 
+                          shape_score * 0.1 + size_score * 0.1)
+            
+            print(f"  组件 {label}: 面积={area}, 位置=({component_center_x},{component_center_y}), "
+                  f"尺寸={w}x{h}, 评分={total_score:.3f}")
+            
+            if total_score > best_score:
+                best_score = total_score
+                best_component = label
+        
+        if best_component == 0:
+            raise Exception(f"未找到合适的主体组件")
+        
+        # 创建只包含最佳主体的掩膜
+        subject_mask = (labels_im == best_component).astype(np.uint8)
+        coords = cv2.findNonZero(subject_mask)
+        
+        if coords is None:
+            raise Exception(f"无法找到最佳主体的坐标")
+            
+        x, y, w, h = cv2.boundingRect(coords)
+        print(f"✅ 选择了评分最高的主体 (评分: {best_score:.3f}, 尺寸: {w}x{h})")
     
-    # 获取主体的边界框
-    coords = cv2.findNonZero(subject_mask)
-    x, y, w, h = cv2.boundingRect(coords)
+    # 检查主体尺寸
     if w < 64 or h < 64:
         raise Exception(f"主体尺寸过小（{w}x{h}）")
     
