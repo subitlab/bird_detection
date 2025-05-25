@@ -16,6 +16,7 @@ import urllib.parse
 import ssl
 import warnings
 import json
+from datetime import datetime
 
 # Suppress SSL warnings and InsecureRequestWarning
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -443,6 +444,157 @@ def bird_detail(bird_class_id):
 
     print(f"🎨 渲染模板，传递数据: {list(bird_data.keys())}")
     return render_template('bird_detail.html', bird_data=bird_data)
+
+@app.route('/api/identify_bird', methods=['POST'])
+def api_identify_bird():
+    """
+    树莓派专用鸟类识别API接口
+    接收图像文件，返回识别结果的JSON响应
+    """
+    try:
+        # 检查是否有文件上传
+        if 'image' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': '未找到图像文件',
+                'error_code': 'NO_FILE'
+            }), 400
+        
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': '未选择文件',
+                'error_code': 'EMPTY_FILENAME'
+            }), 400
+        
+        # 检查文件格式
+        if not allowed_file(file.filename):
+            return jsonify({
+                'success': False,
+                'error': '不支持的文件格式，仅支持: png, jpg, jpeg, gif',
+                'error_code': 'INVALID_FORMAT'
+            }), 400
+        
+        # 保存上传的文件
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_filename = f"rpi_{timestamp}_{filename}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        file.save(file_path)
+        
+        # 执行图像处理和识别流程
+        try:
+            # 步骤1: 压缩图像
+            compressed_path = compress_image(file_path)
+            
+            # 步骤2: 去背景
+            image_np, mask = remove_background(compressed_path)
+            
+            # 步骤3: 创建最终图像
+            final_image_path = create_final_image(image_np, mask)
+            
+            # 步骤4: 模型预测
+            predicted_bird = predict_image(final_image_path)
+            
+            # 查找鸟类ID（用于详情页链接）
+            bird_class_id = None
+            if not class_mapping_df.empty:
+                matching_rows = class_mapping_df[class_mapping_df['original_label'] == predicted_bird]
+                if not matching_rows.empty:
+                    # 转换为Python原生int类型，避免JSON序列化错误
+                    bird_class_id = int(matching_rows.iloc[0]['class'])
+            
+            # 清理临时文件
+            cleanup_files = [file_path, compressed_path, final_image_path]
+            for temp_file in cleanup_files:
+                if os.path.exists(temp_file):
+                    try:
+                        os.remove(temp_file)
+                    except Exception as e:
+                        print(f"清理文件失败 {temp_file}: {e}")
+            
+            # 返回成功结果
+            return jsonify({
+                'success': True,
+                'result': {
+                    'bird_name': predicted_bird,
+                    'bird_class_id': bird_class_id,
+                    'confidence': 'high',  # 可以后续添加置信度计算
+                    'timestamp': datetime.now().isoformat(),
+                    'processing_time': 'completed'
+                },
+                'message': '识别成功'
+            }), 200
+            
+        except Exception as processing_error:
+            # 处理过程中的错误
+            error_msg = str(processing_error)
+            
+            # 清理上传的文件
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except:
+                    pass
+            
+            # 根据错误类型返回不同的错误码
+            if "未检测到主体或检测到多个主体" in error_msg:
+                error_code = 'SUBJECT_DETECTION_FAILED'
+            elif "主体尺寸过小" in error_msg:
+                error_code = 'SUBJECT_TOO_SMALL'
+            else:
+                error_code = 'PROCESSING_ERROR'
+            
+            return jsonify({
+                'success': False,
+                'error': f'图像处理失败: {error_msg}',
+                'error_code': error_code,
+                'timestamp': datetime.now().isoformat()
+            }), 422
+            
+    except Exception as e:
+        # 系统级错误
+        return jsonify({
+            'success': False,
+            'error': f'服务器内部错误: {str(e)}',
+            'error_code': 'INTERNAL_ERROR',
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/health', methods=['GET'])
+def api_health_check():
+    """
+    健康检查接口，供树莓派检测服务状态
+    """
+    try:
+        # 检查模型是否正常加载 - 修复检查逻辑
+        model_status = "not_loaded"
+        try:
+            from model_utils import classification_model
+            if classification_model is not None:
+                model_status = "loaded"
+        except Exception as model_error:
+            print(f"模型检查失败: {model_error}")
+            model_status = "error"
+        
+        # 检查上传目录是否可写
+        upload_writable = os.access(app.config['UPLOAD_FOLDER'], os.W_OK)
+        
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'model_status': model_status,
+            'upload_directory': 'writable' if upload_writable else 'not_writable',
+            'version': '1.0.0'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80, debug=True)
