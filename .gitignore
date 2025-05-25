@@ -1,0 +1,245 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Project specific files
+
+# 用户上传的文件
+uploads/
+upload/
+
+# 鸟类数据集（通常较大，不适合版本控制）
+static/train/
+static/test/
+static/valid/
+static/dataset/
+static/images/
+static/bird_images/
+
+# 本地鸟类数据（可能包含大量图片）
+bird_data_local/
+
+# 模型文件（通常较大）
+*.h5
+*.hdf5
+*.pkl
+*.pth
+*.pt
+*.ckpt
+*.pb
+*.tflite
+*.onnx
+models/
+checkpoints/
+
+# 数据文件（可能较大）
+*.csv
+*.json
+!class_mapping.csv
+!package.json
+data/
+datasets/
+
+# 验证结果文件
+image_validation_results.json
+invalid_images_list.txt
+validation_report.txt
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+*.temp
+
+# 日志文件
+*.log
+logs/
+
+# 缓存文件
+.cache/
+cache/
+
+# 配置文件（可能包含敏感信息）
+config.py
+config.yaml
+config.json
+.env.local
+.env.production
+
+# IDE相关文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS相关文件
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows相关文件
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux相关文件
+*~
+
+# 备份文件
+*.bak
+*.backup
+*.old
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# 测试相关
+test_encoding.py
+test_*.py
+debug_*.py
+
+# API密钥和敏感信息
+api_keys.txt
+secrets.txt
+credentials.json
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 其他
+.pytest_cache/
+.coverage
+htmlcov/ 

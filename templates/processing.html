@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>处理中...</title>
+    <style>
+        /* Modal styles */
+        #loadingModal {
+            display: flex; /* Display the modal */
+            position: fixed;
+            z-index: 999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+        #loadingModal div {
+            background-color: #333;
+            padding: 20px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        #loadingModal ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 18px;
+        }
+        #loadingModal li {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Modal -->
+    <div id="loadingModal">
+        <div>
+            <p>图片正在处理中，请稍候...</p>
+            <ul id="progressList">
+                <li>图像压缩：<span id="compressStatus">⏳</span></li>
+                <li>移除背景：<span id="removeBgStatus">⏳</span></li>
+                <li>创建最终图像：<span id="createFinalStatus">⏳</span></li>
+                <li>预测：<span id="predictionStatus">⏳</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        var task_id = "{{ task_id }}";
+        // Update progress status in the modal
+        function updateProgress(status) {
+            document.getElementById('compressStatus').textContent = status.steps.compress_image ? '✅' : '⏳';
+            document.getElementById('removeBgStatus').textContent = status.steps.remove_background ? '✅' : '⏳';
+            document.getElementById('createFinalStatus').textContent = status.steps.create_final_image ? '✅' : '⏳';
+            document.getElementById('predictionStatus').textContent = status.steps.prediction ? '✅' : '⏳';
+        }
+
+        // Periodically check task status
+        function checkStatus() {
+            fetch('/task_status/' + task_id)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'completed') {
+                        updateProgress(data);
+                        // Task completed, redirect to result page
+                        window.location.href = '/result?task_id=' + task_id;
+                    } else if (data.status === 'failed') {
+                        alert('处理失败：' + data.error);
+                        window.location.href = '/';
+                    } else {
+                        updateProgress(data);
+                        // Continue checking
+                        setTimeout(checkStatus, 1000);
+                    }
+                });
+        }
+
+        // Start checking task status
+        checkStatus();
+    </script>
+</body>
+</html>

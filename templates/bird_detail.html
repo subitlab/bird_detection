@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ bird_data.name }} - 鸟类详情</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; padding: 0; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 960px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; text-align: center; }
+        .detail-section { margin-bottom: 20px; }
+        .detail-section h2 { color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        .detail-section .content { line-height: 1.6; word-wrap: break-word; }
+        .detail-section .content img { max-width: 100%; height: auto; display: block; margin: 10px auto; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back-link { display: inline-block; margin-bottom: 20px; padding: 8px 15px; background-color: #007bff; color: white; border-radius: 5px; text-align: center; }
+        .back-link:hover { background-color: #0056b3; text-decoration: none; }
+        .empty-data { color: #777; font-style: italic; }
+        
+        /* 版权声明样式 */
+        .copyright-notice {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .copyright-notice h3 {
+            color: #495057;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .copyright-notice ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .copyright-notice li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        .disclaimer-footer {
+            margin-top: 15px;
+            margin-bottom: 0;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{{ url_for('index') }}" class="back-link">返回首页</a>
+        <h1>{{ bird_data.name }} {% if bird_data.class_id %}(ID: {{ bird_data.class_id }}){% endif %}</h1>
+
+        <div class="detail-section">
+            <h2>鸟种描述</h2>
+            <div class="content">
+                {% if bird_data.description %}
+                    {{ bird_data.description | safe }}
+                {% else %}
+                    <p class="empty-data">未能从鸟网获取鸟种描述信息，或该鸟类无此信息。</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h2>鸟种分布</h2>
+            <div class="content">
+                {% if bird_data.distribution %}
+                    {{ bird_data.distribution | safe }}
+                {% else %}
+                    <p class="empty-data">未能从鸟网获取鸟种分布信息，或该鸟类无此信息。</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 版权声明和免责声明 -->
+        <div class="copyright-notice">
+            <h3>版权声明</h3>
+            <p><strong>内容来源：</strong>本页面展示的鸟种描述和分布图片等内容均来源于<a href="https://www.birdnet.cn" target="_blank" rel="noopener">鸟网(birdnet.cn)</a>，仅供学习和研究使用。</p>
+            
+            <h3>免责声明</h3>
+            <ul>
+                <li>本页面内容仅用于鸟类知识普及和学术交流，不用于任何商业用途。</li>
+                <li>所有图片和文字内容的版权归原作者和鸟网所有。</li>
+                <li>如果您是相关内容的版权所有者，认为本页面的使用侵犯了您的权益，请<a href="mailto:yangzixiao2027@i.pkuschool.edu.cn">联系我们</a>，我们将在24小时内删除相关内容。</li>
+                <li>本站尊重知识产权，支持原创作者权益保护。</li>
+            </ul>
+            
+            <p class="disclaimer-footer">
+                <small>如需商业使用相关内容，请直接联系<a href="https://www.birdnet.cn" target="_blank" rel="noopener">鸟网</a>或原作者获得授权。</small>
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

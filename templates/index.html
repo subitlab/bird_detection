@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>鸟类识别系统</title>
+    <style>
+        /* 样式代码与您之前的一致 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .form-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .photo-wall {
+            margin: 20px;
+        }
+        .photo-row {
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .photo-row::-webkit-scrollbar {
+            display: none; /* 隐藏滚动条 */
+        }
+        .photo-row div {
+            text-align: center;
+        }
+        .photo-row img {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border: 2px solid #ccc;
+            transition: border-color 0.3s, transform 0.3s;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+        .photo-row img:hover {
+            border-color: #007bff;
+        }
+        .photo-row img.selected {
+            border-color: #ff0000;
+            transform: scale(1.1);
+        }
+        .bird-name {
+            font-size: 14px;
+            color: #555;
+            margin-top: 5px;
+        }
+        button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>鸟类识别系统</h1>
+
+    <!-- 上传图片表单 -->
+    <div class="form-section">
+        <form id="uploadForm" method="POST" action="/" enctype="multipart/form-data" novalidate>
+            <input type="hidden" name="step" value="upload">
+            <input type="file" name="file" accept="image/*" style="display: none;" required>
+            <button type="submit" id="submitform" style="display: none;">上传并识别</button>
+        </form>
+        <button id="uploadBtn" onclick="doupload()">上传图片</button>
+    </div>
+
+    <!-- 照片墙 -->
+    <form id="photoWallForm" method="POST" action="/" novalidate>
+        <input type="hidden" name="step" value="select">
+        <div class="photo-wall">
+            {% for row in image_rows %}
+            <div class="photo-row">
+                {% for image_url, label, filepath, bird_class_id in row %}
+                <div>
+                    <label>
+                        <input type="radio" name="selected_image" value="{{ filepath }}" style="display: none;">
+                        <img src="{{ image_url }}" alt="{{ label }}" onclick="selectImage(this)">
+                    </label>
+                    <div class="bird-name">
+                        <a href="{{ url_for('bird_detail', bird_class_id=bird_class_id) }}" title="查看 {{ label }} 详情">{{ label }}</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        <button type="submit" id="wallbtn" style="display: none;">识别选中图片</button>
+    </form>
+
+    <script>
+        let btnSelected = document.getElementById('wallbtn');
+        // 选中图片并高亮
+        function selectImage(imageElement) {
+            const images = document.querySelectorAll('.photo-row img');
+            images.forEach(img => img.classList.remove('selected'));
+            imageElement.classList.add('selected');
+            imageElement.previousElementSibling.checked = true;
+        }
+
+        // 自动滚动功能 - 新的实现
+        window.addEventListener('load', () => {
+        const rows = document.querySelectorAll('.photo-row');
+            const scrollConfigs = [];
+
+        rows.forEach((row, index) => {
+                const originalChildren = Array.from(row.children);
+                if (originalChildren.length === 0) return;
+
+                const trueCycleWidth = row.scrollWidth;
+                if (trueCycleWidth === 0) return;
+
+                originalChildren.forEach(item => {
+                    const clone = item.cloneNode(true);
+                    const imgClone = clone.querySelector('img') || (clone.tagName === 'IMG' ? clone : null);
+                    const originalImg = item.querySelector('img') || (item.tagName === 'IMG' ? item : null);
+                    if (imgClone && originalImg && originalImg.onclick) {
+                        imgClone.onclick = originalImg.onclick;
+                    }
+                    row.appendChild(clone);
+                });
+
+                const config = {
+                    row: row,
+                    position: 0, // 当前滚动位置
+                    speed: 0.8 + index * 0.2, // 每行不同的滚动速度
+                    direction: index % 2 === 0 ? 1 : -1, // 交替方向滚动
+                    isPaused: false,
+                    cycleWidth: trueCycleWidth, // 使用精确计算的单轮宽度
+                    canScroll: row.scrollWidth > row.clientWidth && trueCycleWidth > 0 
+                };
+
+                if (config.canScroll) {
+                    scrollConfigs.push(config);
+                    // 添加鼠标悬停暂停功能
+                    row.addEventListener('mouseenter', () => {
+                        config.isPaused = true;
+                    });
+                    row.addEventListener('mouseleave', () => {
+                        config.isPaused = false;
+                    });
+                }
+            });
+
+            function smoothScrollAnimation() {
+                scrollConfigs.forEach(config => {
+                    if (config.isPaused || !config.canScroll) return;
+                    
+                    const { row, speed, direction, cycleWidth } = config;
+                    
+                    config.position += speed * direction;
+                    
+                    // 实现无缝循环逻辑
+                    if (direction === 1) { // 内容向左移动
+                        if (config.position >= cycleWidth) {
+                            config.position -= cycleWidth;
+                        }
+                    } else { // 内容向右移动 (direction === -1)
+                        if (config.position < 0) {
+                            config.position += cycleWidth;
+                        }
+                    }
+                    
+                    row.scrollTo({
+                        left: config.position,
+                        behavior: 'auto' // 关键：瞬时跳转以实现无缝
+                    });
+                });
+                
+                requestAnimationFrame(smoothScrollAnimation);
+            }
+
+            if (scrollConfigs.length > 0) {
+                // 延迟启动动画，给浏览器一点时间渲染复制后的DOM
+                setTimeout(smoothScrollAnimation, 100); 
+            }
+        });
+
+        function doupload() {
+            const selectedImage = document.getElementById('photoWallForm').querySelector('input[name="selected_image"]:checked');
+            if (selectedImage) {
+                btnSelected.click();
+                return;
+            }
+            const fileInput = document.querySelector('input[name="file"]');
+            fileInput.click();
+            fileInput.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    document.getElementById('submitform').click();
+                }
+            });
+            return;
+        }
+
+        // 上传表单校验
+        document.getElementById('uploadForm').addEventListener('submit', function (event) {
+
+            const fileInput = this.querySelector('input[name="file"]');
+            if (!fileInput || !fileInput.files.length) {
+                alert("请上传一张图片进行识别！");
+                event.preventDefault();
+                return;
+            }
+            // 提交表单后，后端会重定向到 processing 页面，弹窗在该页面显示
+        });
+
+        // 照片墙表单校验
+        document.getElementById('photoWallForm').addEventListener('submit', function (event) {
+            const selectedImage = this.querySelector('input[name="selected_image"]:checked');
+            if (!selectedImage) {
+                event.preventDefault();
+                return;
+            }
+            // 提交表单后，后端会重定向到 processing 页面，弹窗在该页面显示
+        });
+    </script>
+</body>
+</html>
